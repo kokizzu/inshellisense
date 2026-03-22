@@ -47,20 +47,26 @@ __is_update_cwd() {
 	builtin printf '\e]6973;CWD;%s\a' "$(__is_escape_value "${PWD}")"
 }
 
-__is_update_prompt() {
-	__is_prior_prompt="$PS1"
-	if [[ $ISTERM_TESTING == "1" ]]; then
-		__is_prior_prompt="> "
-	fi
-	PS1="%{$(__is_prompt_start)%}$__is_prior_prompt%{$(__is_prompt_end)%}"
-}
-
 __is_precmd() {
-	if [[ $PS1 != *"$(__is_prompt_start)"* ]]; then
-		__is_update_prompt
-	fi
 	__is_update_cwd
+	if [[ $ISTERM_TESTING == "1" ]]; then
+		PS1="%{$(__is_prompt_start)%}> %{$(__is_prompt_end)%}"
+	fi
 }
 
-__is_update_prompt
+if (( ${+widgets[zle-line-init]} )); then
+	zle -A zle-line-init __is_orig_zle_line_init
+	__is_zle_line_init() {
+		__is_prompt_start
+		zle __is_orig_zle_line_init
+		__is_prompt_end
+	}
+else
+	__is_zle_line_init() {
+		__is_prompt_start
+		__is_prompt_end
+	}
+fi
+zle -N zle-line-init __is_zle_line_init
+
 add-zsh-hook precmd __is_precmd
